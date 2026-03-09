@@ -1,0 +1,27 @@
+services:
+  policy-expert-mock:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      MOCK_HOST: "0.0.0.0"
+      MOCK_PORT: "8080"
+      MOCK_DEFAULT_SCENARIO: "simple_response"
+      MOCK_CHUNK_DELAY: "0.05"
+      MOCK_ASK_USER_DELAY: "0.3"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # console-one-backend:
+  #   image: console-one-backend:latest
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     AGENT_RUNNER_URL_TEMPLATE: "http://policy-expert-mock:8080"
+  #   depends_on:
+  #     policy-expert-mock:
+  #       condition: service_healthy

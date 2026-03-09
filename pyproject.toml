@@ -1,0 +1,26 @@
+[project]
+name = "policy-expert-mock"
+version = "0.1.0"
+description = "Mock Agent Platform for policy-expert agent integration testing"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["main", "config", "state"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["scenarios*", "routers*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
