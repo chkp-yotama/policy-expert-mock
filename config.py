@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8080
     # Default scenario when no explicit override is set
-    default_scenario: str = "simple_response"
+    default_scenario: str = "prompt_router"
     # Delay between streamed chunks (seconds)
     chunk_delay: float = 0.05
     # Delay before the ask-user question is emitted

@@ -2,6 +2,7 @@ from scenarios.ask_user_chained import AskUserChainedScenario
 from scenarios.ask_user_single import AskUserSingleScenario
 from scenarios.base import AbstractScenario
 from scenarios.error_scenario import ErrorScenario
+from scenarios.prompt_router import PromptRouterScenario
 from scenarios.simple_response import SimpleResponseScenario
 
 REGISTRY: dict[str, type[AbstractScenario]] = {
@@ -9,6 +10,7 @@ REGISTRY: dict[str, type[AbstractScenario]] = {
     "ask_user_single": AskUserSingleScenario,
     "ask_user_chained": AskUserChainedScenario,
     "error": ErrorScenario,
+    "prompt_router": PromptRouterScenario,
 }
 
 

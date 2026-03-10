@@ -56,6 +56,8 @@ class AbstractScenario(ABC):
     def _final_response(cls, run_id: str, question_id: str, text: str, cost: float = 0.001) -> str:
         return cls._sse({
             "response_type": "RESPONSE",
+            "uuid": run_id,
+            "question_id": question_id,
             "chunk": text,
             "full_response": {
                 "agent_id": "policy-expert",
@@ -78,6 +80,8 @@ class AbstractScenario(ABC):
     ) -> str:
         return cls._sse({
             "response_type": "ASK_USER_RESPONSE",
+            "uuid": run_id,
+            "question_id": question_id,
             "chunk": question_text,
             "full_response": {
                 "agent_id": "policy-expert",
@@ -103,9 +107,10 @@ class AbstractScenario(ABC):
 
     @classmethod
     def _status_chunk(cls, run_id: str, question_id: str, status: str) -> str:
+        # Backend reads chunk.get("status_data") and validates it as StatusData(stage=...)
         return cls._sse({
             "response_type": "STATUS",
             "uuid": run_id,
             "question_id": question_id,
-            "status": status,
+            "status_data": {"stage": status},
         })
