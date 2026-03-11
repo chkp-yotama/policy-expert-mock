@@ -97,6 +97,69 @@ class AbstractScenario(ABC):
         })
 
     @classmethod
+    def _tool_call_chunk(
+        cls,
+        run_id: str,
+        question_id: str,
+        tool_name: str,
+        tool_call_id: str,
+        args: dict,
+    ) -> str:
+        return cls._sse({
+            "response_type": "INTERMEDIATE_RESPONSE",
+            "uuid": run_id,
+            "question_id": question_id,
+            "metadata": {
+                "process_type": "TOOL_CALL",
+                "payload": {
+                    "tool_name": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "args": args,
+                },
+            },
+        })
+
+    @classmethod
+    def _tool_response_chunk(
+        cls,
+        run_id: str,
+        question_id: str,
+        tool_name: str,
+        tool_call_id: str,
+        content: str,
+    ) -> str:
+        return cls._sse({
+            "response_type": "INTERMEDIATE_RESPONSE",
+            "uuid": run_id,
+            "question_id": question_id,
+            "metadata": {
+                "process_type": "TOOL_RESPONSE",
+                "payload": {
+                    "tool_name": tool_name,
+                    "tool_call_id": tool_call_id,
+                    "content": content,
+                },
+            },
+        })
+
+    @classmethod
+    async def _stream_reasoning(
+        cls, run_id: str, question_id: str, text: str
+    ) -> AsyncGenerator[str, None]:
+        """Yield STREAMING chunks with process_type=REASONING (not shown as answer)."""
+        words = text.split()
+        for i, word in enumerate(words):
+            chunk = word if i == len(words) - 1 else word + " "
+            yield cls._sse({
+                "response_type": "STREAMING",
+                "uuid": run_id,
+                "question_id": question_id,
+                "chunk": chunk,
+                "metadata": {"process_type": "REASONING"},
+            })
+            await cls._delay()
+
+    @classmethod
     def _error_chunk(cls, run_id: str, question_id: str, message: str) -> str:
         return cls._sse({
             "response_type": "ERROR",

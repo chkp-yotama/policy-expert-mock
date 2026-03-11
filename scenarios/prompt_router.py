@@ -38,6 +38,15 @@ _ROUTES: list[dict] = [
         "patterns": [r"\bdelete.*(rule|policy)\b", r"\bremove.*(rule|policy)\b"],
         "kind": "ask_user",
         "status": "Preparing deletion...",
+        "reasoning": "The user wants to delete a rule. I'll look it up first, then ask for confirmation.",
+        "tool_calls": [
+            {
+                "tool_name": "show_access_rule",
+                "tool_call_id": "tc-del-001",
+                "args": {"name": "Network", "rule-number": 1},
+                "response": '{"rule-number":1,"name":"Cleanup Rule","src":"Any","dst":"Any","service":"Any","action":"Accept","enabled":true}',
+            },
+        ],
         "question": "Are you sure you want to delete rule#1? This action cannot be undone.",
         "operation": "delete_rule",
         "options": ["Accept", "Reject"],
@@ -70,6 +79,15 @@ _ROUTES: list[dict] = [
                      r"\boptimal position\b"],
         "kind": "ask_user",
         "status": "Searching for reference rules...",
+        "reasoning": "I need to find reference rules to determine optimal placement. I'll call inquire_rules.",
+        "tool_calls": [
+            {
+                "tool_name": "inquire_rules",
+                "tool_call_id": "tc-place-001",
+                "args": {"package": "Standard", "layer": "Network", "rule_name": ""},
+                "response": '{"status":"RULES_INQUIRED","rules":[{"uid":"uid-42","rule-number":42,"name":"Allow HTTPS"},{"uid":"uid-57","rule-number":57,"name":"Allow DNS"},{"uid":"uid-89","rule-number":89,"name":"Drop DMZ"}]}',
+            },
+        ],
         "question": (
             "I found 3 rules matching your criteria. "
             "Please select the reference rule to use for placement:\n\n"
@@ -146,11 +164,20 @@ _ROUTES: list[dict] = [
 
     # ── Firewall policy: specific access rule queries (simple) ───────────────
     {
-        "patterns": [r"\baccess rule\b", r"\baccess rulebase\b",
-                     r"\bfirewall rule\b", r"\bsrc:\b", r"\bdst:\b",
+        "patterns": [r"\baccess rules?\b", r"\baccess rulebase\b",
+                     r"\bfirewall rules?\b", r"\bshow access\b", r"\bsrc:\b", r"\bdst:\b",
                      r"\bzero.hit\b", r"\bunused rule\b"],
         "kind": "simple",
         "status": "Querying access rulebase...",
+        "reasoning": "I need to query the access rulebase. I'll use show_access_rulebase with the Network layer.",
+        "tool_calls": [
+            {
+                "tool_name": "show_access_rulebase",
+                "tool_call_id": "tc-001",
+                "args": {"name": "Network", "limit": 50},
+                "response": '[{"rule-number":12,"src":"WebServers","dst":"Internet","service":"https","action":"Accept"},{"rule-number":34,"src":"WebServers","dst":"Internet","service":"http","action":"Accept"}]',
+            },
+        ],
         "answer": (
             "Found 2 rules matching your query:\n\n"
             "rule#12 — WebServers → Internet → HTTPS (tcp/443) → Accept | logged\n"
@@ -164,6 +191,15 @@ _ROUTES: list[dict] = [
         "patterns": [r"\bnat\b", r"\bnetwork address\b", r"\bhide nat\b", r"\bstatic nat\b"],
         "kind": "simple",
         "status": "Querying NAT rulebase...",
+        "reasoning": "I need to query NAT rules. I'll use show_nat_rulebase for the Standard package.",
+        "tool_calls": [
+            {
+                "tool_name": "show_nat_rulebase",
+                "tool_call_id": "tc-002",
+                "args": {"package": "Standard"},
+                "response": '[{"rule-number":2,"original-source":"WebServer-Internal","translated-source":"WebServer-Public","method":"static"}]',
+            },
+        ],
         "answer": (
             "Found 1 NAT rule matching your query:\n\n"
             "nat#2 — Static NAT\n"
@@ -180,6 +216,15 @@ _ROUTES: list[dict] = [
                      r"\bthreat prevention\b"],
         "kind": "simple",
         "status": "Querying threat prevention...",
+        "reasoning": "I'll check CVE protection status using check_cve_protection, then verify IPS blade status per gateway.",
+        "tool_calls": [
+            {
+                "tool_name": "check_cve_protection",
+                "tool_call_id": "tc-003",
+                "args": {"cve": "CVE-2021-44228"},
+                "response": '{"protection":"Apache Log4j RCE","confidence-level":"High","severity":"Critical","gateways":[{"name":"GW-01","ips-blade":true,"profile":"Strict"},{"name":"GW-02","ips-blade":true,"profile":"Optimized"}]}',
+            },
+        ],
         "answer": (
             "CVE protection check result:\n\n"
             "Protection found: 'Apache Log4j RCE (CVE-2021-44228)'\n"
@@ -202,6 +247,15 @@ _ROUTES: list[dict] = [
                      r"\bbypass\b", r"\btls inspection\b"],
         "kind": "simple",
         "status": "Querying HTTPS inspection policy...",
+        "reasoning": "I'll query the HTTPS inspection rulebase to find bypass and inspect rules.",
+        "tool_calls": [
+            {
+                "tool_name": "show_https_rulebase",
+                "tool_call_id": "tc-004",
+                "args": {"name": "HTTPS Inspection"},
+                "response": '[{"rule-number":1,"action":"Bypass","dst":"TrustedCertAuthorities"},{"rule-number":2,"action":"Inspect","src":"InternalHosts","dst":"Social-Networks"},{"rule-number":3,"action":"Bypass","dst":"FinancialSites"}]',
+            },
+        ],
         "answer": (
             "HTTPS inspection policy — 3 rules:\n\n"
             "rule#1 — Bypass | Any → TrustedCertAuthorities | reason: trusted CA\n"
@@ -218,6 +272,15 @@ _ROUTES: list[dict] = [
                      r"\bwho is\b"],
         "kind": "simple",
         "status": "Looking up object...",
+        "reasoning": "I'll search for the object by name using show_objects.",
+        "tool_calls": [
+            {
+                "tool_name": "show_objects",
+                "tool_call_id": "tc-005",
+                "args": {"name": "WebServers", "details-level": "full"},
+                "response": '{"name":"WebServers","type":"host-group","uid":"a3f2c1d0-4b5e-4f6a-8c9d-1e2f3a4b5c6d","members":["WebServer-01","WebServer-02","WebServer-03"]}',
+            },
+        ],
         "answer": (
             "Object found:\n\n"
             "Name: WebServers\n"
@@ -234,6 +297,15 @@ _ROUTES: list[dict] = [
                      r"\bblade\b", r"\binfrastructure\b", r"\bgw\b"],
         "kind": "simple",
         "status": "Querying infrastructure...",
+        "reasoning": "I'll query all gateways with full details to get blade status and installed policies.",
+        "tool_calls": [
+            {
+                "tool_name": "show_gateways_and_servers",
+                "tool_call_id": "tc-006",
+                "args": {"details-level": "full"},
+                "response": '[{"name":"GW-01","ip":"192.168.1.1","type":"simple-gateway","policy":{"name":"Standard"},"blades":{"firewall":true,"ips":true,"application-control":true,"url-filtering":true}},{"name":"GW-02","ip":"192.168.1.2","type":"simple-gateway","policy":{"name":"Standard"},"blades":{"firewall":true,"ips":true,"application-control":false}}]',
+            },
+        ],
         "answer": (
             "Gateways found:\n\n"
             "GW-01 (192.168.1.1) — standalone | status: connected\n"
@@ -300,6 +372,20 @@ class PromptRouterScenario(AbstractScenario):
         if route and route["kind"] == "ask_user":
             if turn == 0:
                 yield self._status_chunk(run_id, question_id, route["status"])
+                await self._delay()
+
+                reasoning = route.get("reasoning")
+                if reasoning:
+                    async for chunk in self._stream_reasoning(run_id, question_id, reasoning):
+                        yield chunk
+
+                for tc in route.get("tool_calls", []):
+                    call_id = tc["tool_call_id"]
+                    yield self._tool_call_chunk(run_id, question_id, tc["tool_name"], call_id, tc["args"])
+                    await self._delay()
+                    yield self._tool_response_chunk(run_id, question_id, tc["tool_name"], call_id, tc["response"])
+                    await self._delay()
+
                 await asyncio.sleep(settings.ask_user_delay)
                 yield self._ask_user_chunk(
                     run_id=run_id,
@@ -327,6 +413,20 @@ class PromptRouterScenario(AbstractScenario):
         elif route and route["kind"] == "simple":
             yield self._status_chunk(run_id, question_id, route["status"])
             await self._delay()
+
+            # Emit reasoning + tool calls if defined on the route
+            reasoning = route.get("reasoning")
+            if reasoning:
+                async for chunk in self._stream_reasoning(run_id, question_id, reasoning):
+                    yield chunk
+
+            for tc in route.get("tool_calls", []):
+                call_id = tc["tool_call_id"]
+                yield self._tool_call_chunk(run_id, question_id, tc["tool_name"], call_id, tc["args"])
+                await self._delay()
+                yield self._tool_response_chunk(run_id, question_id, tc["tool_name"], call_id, tc["response"])
+                await self._delay()
+
             async for chunk in self._stream_text(run_id, question_id, route["answer"]):
                 yield chunk
             yield self._final_response(run_id, question_id, route["answer"])
